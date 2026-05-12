@@ -1,44 +1,41 @@
 const express = require('express');
-const puppeteer = require('puppeteer');   // substitui o axios
+const puppeteer = require('puppeteer-core');
+const chromium = require('@sparticuz/chromium');
 
 const app = express();
 
 async function atualizarStatus() {
-    console.log('INICIANDO REQUEST COM PUPPETEER');
+    console.log('INICIANDO REQUEST COM PUPPETEER-CORE + CHROMIUM');
 
     let browser;
     try {
-        // Inicia o navegador headless (modo moderno)
+        // Configuração otimizada para Render e ambientes serverless
         browser = await puppeteer.launch({
-            headless: 'new',
-            args: ['--no-sandbox', '--disable-setuid-sandbox']  // importante para ambientes como Render
+            args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox'],
+            defaultViewport: chromium.defaultViewport,
+            executablePath: await chromium.executablePath(),
+            headless: chromium.headless,
+            ignoreHTTPSErrors: true,
         });
 
         const page = await browser.newPage();
-
-        // Configura um User-Agent realista e viewport
         await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-        await page.setViewport({ width: 1366, height: 768 });
 
-        // Acessa a URL e aguarda a resolução do desafio e carregamento completo da página
+        console.log('Navegando para a URL...');
         await page.goto('https://vsonline.wuaze.com/atualiza_todos_status.php?token=VS_87443981', {
-            waitUntil: 'networkidle0',  // espera todos os scripts e conexões terminarem
+            waitUntil: 'networkidle0',
             timeout: 30000
         });
 
-        // Após a execução do JavaScript, obtemos o conteúdo final da página (texto puro)
+        // Aguarda um pequeno tempo extra para garantir execução de scripts assíncronos
+        await page.waitForTimeout(2000);
+
         const conteudo = await page.evaluate(() => document.body.innerText.trim());
         console.log('RESPOSTA FINAL:', conteudo || '(vazio)');
 
-        // Também podemos obter o HTML completo se necessário
-        // const html = await page.content();
-
     } catch (error) {
-        console.log('ERRO NO PUPPETEER');
-        if (error.message) {
-            console.log('Mensagem:', error.message);
-        }
-        // Captura erros de navegação ou timeout
+        console.log('ERRO AO ATUALIZAR STATUS');
+        console.error(error);
     } finally {
         if (browser) {
             await browser.close();
@@ -48,6 +45,7 @@ async function atualizarStatus() {
 
 app.get('/ping', async (req, res) => {
     console.log('PING RECEBIDO');
+    // Não precisamos esperar o término para responder, mas faz sentido para garantir execução
     await atualizarStatus();
     res.send('OK');
 });
@@ -58,5 +56,5 @@ app.get('/', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log('Servidor iniciado na porta ' + PORT);
+    console.log(`Servidor rodando na porta ${PORT}`);
 });

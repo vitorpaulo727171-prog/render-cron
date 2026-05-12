@@ -1,5 +1,6 @@
 const express = require('express');
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-core');
+const chromium = require('@sparticuz/chromium');
 
 const app = express();
 
@@ -7,15 +8,10 @@ const URL =
 'https://vsonline.wuaze.com/atualiza_todos_status.php?token=VS_87443981';
 
 let executando = false;
-let ultimaExecucao = null;
 
-// Função principal
 async function executar() {
 
-    if (executando) {
-        console.log('Já existe uma execução em andamento');
-        return;
-    }
+    if (executando) return;
 
     executando = true;
 
@@ -23,123 +19,70 @@ async function executar() {
 
     try {
 
-        console.log('================================');
-        console.log('INICIANDO:', new Date().toISOString());
+        console.log('INICIANDO');
 
         browser = await puppeteer.launch({
-            headless: 'new',
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-gpu',
-                '--no-first-run',
-                '--no-zygote',
-                '--single-process'
-            ]
+
+            args: chromium.args,
+
+            defaultViewport: chromium.defaultViewport,
+
+            executablePath: await chromium.executablePath(),
+
+            headless: chromium.headless
+
         });
 
         const page = await browser.newPage();
 
-        // User Agent real
         await page.setUserAgent(
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36'
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124 Safari/537.36'
         );
 
-        // Timeout padrão
-        page.setDefaultNavigationTimeout(60000);
-
-        // Logs do navegador
-        page.on('console', msg => {
-            console.log('BROWSER:', msg.text());
-        });
-
-        // Acessar página
         await page.goto(URL, {
-            waitUntil: 'networkidle2'
+            waitUntil: 'networkidle2',
+            timeout: 60000
         });
 
-        // Esperar JS anti-bot concluir
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        await new Promise(r => setTimeout(r, 5000));
 
-        // Capturar conteúdo
-        const content = await page.content();
+        const texto = await page.evaluate(() => document.body.innerText);
 
-        // Capturar texto visível
-        const bodyText = await page.evaluate(() => {
-            return document.body.innerText;
-        });
-
-        console.log('RESPOSTA BODY:');
-        console.log(bodyText);
-
-        // Verificar sucesso
-        if (
-            bodyText.includes('Recargas processadas')
-        ) {
-
-            console.log('SUCESSO');
-
-        } else {
-
-            console.log('RESPOSTA INESPERADA');
-
-        }
-
-        ultimaExecucao = new Date().toISOString();
+        console.log('RESPOSTA:');
+        console.log(texto);
 
     } catch (e) {
 
-        console.log('ERRO GERAL');
-        console.log(e.message);
+        console.log('ERRO');
+        console.log(e);
 
     } finally {
-
-        executando = false;
 
         if (browser) {
             await browser.close();
         }
 
-        console.log('FINALIZADO');
-        console.log('================================');
+        executando = false;
     }
 }
 
-// Endpoint principal
 app.get('/ping', async (req, res) => {
 
     await executar();
 
-    res.send({
-        success: true,
-        ultimaExecucao
-    });
+    res.send('OK');
 });
 
-// Status
 app.get('/', (req, res) => {
 
-    res.send({
-        status: 'online',
-        ultimaExecucao,
-        executando
-    });
+    res.send('Render Online');
 });
 
-// Auto execução a cada 5 minutos
-setInterval(() => {
-
-    executar();
-
-}, 5 * 60 * 1000);
-
-// Executa ao iniciar
-executar();
+setInterval(executar, 300000);
 
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
 
-    console.log('SERVIDOR ONLINE');
+    console.log('Servidor iniciado');
 });

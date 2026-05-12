@@ -1,54 +1,46 @@
 const express = require('express');
-const axios = require('axios');
+const puppeteer = require('puppeteer');
 
 const app = express();
 
-async function atualizarStatus() {
+async function executar() {
 
-    console.log('INICIANDO REQUEST');
+    const browser = await puppeteer.launch({
+        headless: true,
+        args: ['--no-sandbox']
+    });
 
-    try {
+    const page = await browser.newPage();
 
-        const response = await axios.get(
-            'https://vsonline.wuaze.com/atualiza_todos_status.php?token=VS_87443981'
-        );
-
-        console.log('STATUS:', response.status);
-
-        console.log('RESPOSTA:', response.data);
-
-    } catch (error) {
-
-        console.log('ERRO');
-
-        if (error.response) {
-
-            console.log('HTTP:', error.response.status);
-            console.log(error.response.data);
-
-        } else {
-
-            console.log(error.message);
-
+    await page.goto(
+        'https://vsonline.wuaze.com/atualiza_todos_status.php?token=VS_87443981',
+        {
+            waitUntil: 'networkidle2',
+            timeout: 60000
         }
-    }
+    );
+
+    const content = await page.content();
+
+    console.log(content);
+
+    await browser.close();
 }
 
 app.get('/ping', async (req, res) => {
 
-    console.log('PING RECEBIDO');
+    try {
 
-    await atualizarStatus();
+        await executar();
 
-    res.send('OK');
+        res.send('OK');
+
+    } catch (e) {
+
+        console.log(e);
+
+        res.send('ERRO');
+    }
 });
 
-app.get('/', (req, res) => {
-    res.send('Render Cron Online');
-});
-
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-    console.log('Servidor iniciado');
-});
+app.listen(3000);

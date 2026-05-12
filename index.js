@@ -5,29 +5,38 @@ const app = express();
 
 async function atualizarStatus() {
 
+    console.log('INICIANDO REQUEST');
+
     try {
 
         const response = await axios.get(
             'https://vsonline.wuaze.com/atualiza_todos_status.php?token=VS_87443981'
         );
 
-        console.log(
-            new Date().toISOString(),
-            response.data
-        );
+        console.log('STATUS:', response.status);
+
+        console.log('RESPOSTA:', response.data);
 
     } catch (error) {
 
-        console.log(
-            new Date().toISOString(),
-            error.message
-        );
+        console.log('ERRO');
 
+        if (error.response) {
+
+            console.log('HTTP:', error.response.status);
+            console.log(error.response.data);
+
+        } else {
+
+            console.log(error.message);
+
+        }
     }
 }
 
-// endpoint para uptime robot
 app.get('/ping', async (req, res) => {
+
+    console.log('PING RECEBIDO');
 
     await atualizarStatus();
 

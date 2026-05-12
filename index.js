@@ -9,7 +9,6 @@ async function atualizarStatus() {
 
     let browser;
     try {
-        // Configuração otimizada para Render e ambientes serverless
         browser = await puppeteer.launch({
             args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox'],
             defaultViewport: chromium.defaultViewport,
@@ -27,8 +26,8 @@ async function atualizarStatus() {
             timeout: 30000
         });
 
-        // Aguarda um pequeno tempo extra para garantir execução de scripts assíncronos
-        await page.waitForTimeout(2000);
+        // Aguarda 2 segundos extras (garante execução de scripts pendentes)
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
         const conteudo = await page.evaluate(() => document.body.innerText.trim());
         console.log('RESPOSTA FINAL:', conteudo || '(vazio)');
@@ -45,7 +44,6 @@ async function atualizarStatus() {
 
 app.get('/ping', async (req, res) => {
     console.log('PING RECEBIDO');
-    // Não precisamos esperar o término para responder, mas faz sentido para garantir execução
     await atualizarStatus();
     res.send('OK');
 });

@@ -21,7 +21,7 @@ async function atualizarStatus() {
         await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
         console.log('Navegando para a URL...');
-        await page.goto('https://vsonline.wuaze.com/atualiza_todos_status.php?token=VS_87443981', {
+        await page.goto('https://recargapro.gt.tc/atualiza_todos_status.php?token=VS_87443981', {
             waitUntil: 'networkidle0',
             timeout: 30000
         });
